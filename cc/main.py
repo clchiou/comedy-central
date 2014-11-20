@@ -44,5 +44,6 @@ def main(argv):
     cc.inits.run_inits()
     cc.actor.starter.starter()
     cc.actor.join()
+    cc.inits.run_finals()
     logging.info('main: exit')
     return 0
