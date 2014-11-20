@@ -1,0 +1,12 @@
+#!/usr/bin/env python3
+# Copyright (C) 2014 Che-Liang Chiou.  All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import sys
+
+import cc.main
+
+
+if __name__ == '__main__':
+    sys.exit(cc.main.main(sys.argv))
