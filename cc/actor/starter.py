@@ -41,6 +41,9 @@ def init_argparser():
         '--stash',
         help='store download job info to file')
     parser.add_argument(
+        '--stash-append', action='store_true', default=False,
+        help='append job info to file')
+    parser.add_argument(
         '--unstash',
         help='load download job info from file')
     parser.add_argument(
@@ -69,7 +72,10 @@ def init_check_args():
 def init_stash():
     args = cc.statics.args
     if args.stash is not None:
-        cc.statics.pickle_file = open(args.stash, 'wb')
+        if args.stash_append:
+            cc.statics.pickle_file = open(args.stash, 'ab')
+        else:
+            cc.statics.pickle_file = open(args.stash, 'wb')
         cc.statics.pickle_lock = threading.RLock()
     elif args.unstash is not None:
         cc.statics.pickle_file = open(args.unstash, 'rb')
@@ -80,6 +86,7 @@ def init_stash():
 def final_stash():
     args = cc.statics.args
     if args.stash is not None or args.unstash is not None:
+        logging.info('final_stash: close %s', cc.statics.pickle_file.name)
         cc.statics.pickle_file.close()
 
 
