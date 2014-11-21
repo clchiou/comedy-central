@@ -5,12 +5,18 @@
 '''Initialize logger.'''
 
 __all__ = [
+    'DEBUG',
+    'ERROR',
+    'INFO',
+    'WARNING',
     'debug',
     'error',
     'exception',
     'info',
     'trace',
     'warning',
+    # Test logging level
+    'is_enabled_for',
 ]
 
 import functools
@@ -18,6 +24,11 @@ import logging
 
 import cc.inits
 
+
+DEBUG = logging.DEBUG
+ERROR = logging.ERROR
+INFO = logging.INFO
+WARNING = logging.WARNING
 
 # My extra level of logging.
 TRACE = logging.DEBUG - 1
@@ -45,7 +56,8 @@ def init_logging():
     # Configure logger object.
     logging.addLevelName(TRACE, 'TRACE')
     handler = logging.StreamHandler()
-    handler.setFormatter(logging.Formatter('%(levelname)s: %(message)s'))
+    handler.setFormatter(logging.Formatter(
+        '%(levelname)s: %(asctime)s: %(message)s'))
     logger = logging.getLogger('cc')
     logger.addHandler(handler)
     for count, level in ((3, TRACE), (2, logging.DEBUG), (1, logging.INFO)):
@@ -61,3 +73,8 @@ def init_logging():
     warning = functools.partial(logger.log, logging.WARNING)
     # Now logging is ready; emit early logs.
     cc.inits.emit_early_logs(log_func=logger.log)
+    cc.statics.logger = logger
+
+
+def is_enabled_for(level):
+    return cc.statics.logger.isEnabledFor(level)
