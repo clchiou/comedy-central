@@ -12,26 +12,37 @@ __all__ = [
 
 import lxml.etree
 import requests
+import time
 
 from cc import logging
 
 
 def get_url(url):
-    return _get_url(url).text
+    return _get_url_with_retry(url).text
 
 
 def get_url_dom_tree(url):
-    return lxml.etree.fromstring(_get_url(url).content)
+    return lxml.etree.fromstring(_get_url_with_retry(url).content)
 
 
 def get_url_json(url):
-    return _get_url(url).json()
+    return _get_url_with_retry(url).json()
+
+
+def _get_url_with_retry(url):
+    for retry in (1, 2, 4, 8, 16, 32, 64):
+        try:
+            return _get_url(url)
+        except:
+            time.sleep(retry)
+    return _get_url(url)
 
 
 def _get_url(url):
     logging.debug('get_url: url=%s', url)
-    response = requests.get(url)
-    for header, value in response.headers.items():
-        logging.debug('get_url: %s: %s', header, value)
+    response = requests.get(url, timeout=60)
+    if logging.is_enabled_for(logging.TRACE):
+        for header, value in response.headers.items():
+            logging.trace('get_url: %s: %s', header, value)
     response.raise_for_status()
     return response
