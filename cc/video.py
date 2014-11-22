@@ -11,7 +11,11 @@ import os.path
 import re
 import urllib.parse
 
+import lxml.etree
+
 import cc.http
+
+from cc import logging
 
 
 class Video(collections.namedtuple(
@@ -82,10 +86,37 @@ def _get_mediagen_tree(feed, video_blob):
         query=urllib.parse.urlencode({'uri': video_blob.uri}),
         fragment='')
     mrss_url = urllib.parse.urlunparse(new_parts)
-    mrss_tree = cc.http.get_url_dom_tree(mrss_url)
+    try:
+        mrss_tree = cc.http.get_url_dom_tree(mrss_url)
+    except lxml.etree.XMLSyntaxError:
+        logging.warning('fix mrss xml %s', mrss_url, exc_info=True)
+        mrss_tree = _get_url_dom_tree_with_fixes(mrss_url)
     content = mrss_tree.find('.//{http://search.yahoo.com/mrss/}content')
     mediagen_url = content.get('url')
-    return cc.http.get_url_dom_tree(mediagen_url)
+    try:
+        return cc.http.get_url_dom_tree(mediagen_url)
+    except lxml.etree.XMLSyntaxError:
+        logging.warning('fix mediagen xml %s', mediagen_url, exc_info=True)
+        return _get_url_dom_tree_with_fixes(mediagen_url)
+
+
+def _get_url_dom_tree_with_fixes(url):
+    '''Fix some known syntax errors in the returned xml documents.'''
+    doc = cc.http.get_url_bytes(url)
+    pieces = []
+    # Remove comments within which have double hyphen.
+    comment_end = 0
+    while True:
+        comment_start = doc.find(b'<!--', comment_end)
+        if comment_start == -1:
+            break
+        comment_end = doc.index(b'-->', comment_start) + 3
+        logging.debug('strip: %s', repr(doc[comment_start:comment_end]))
+        pieces.append(doc[0:comment_start])
+        pieces.append(doc[comment_end:])
+    if pieces:
+        doc = b''.join(pieces)
+    return lxml.etree.fromstring(doc)
 
 
 _PATTERN_RECAP_VIDEO = re.compile(r'in-+60-+seconds|recap-+week-+of')

@@ -6,13 +6,15 @@
 
 __all__ = [
     'get_url',
+    'get_url_bytes',
     'get_url_dom_tree'
     'get_url_json',
 ]
 
+import time
+
 import lxml.etree
 import requests
-import time
 
 from cc import logging
 
@@ -21,8 +23,12 @@ def get_url(url):
     return _get_url_with_retry(url).text
 
 
+def get_url_bytes(url):
+    return _get_url_with_retry(url).content
+
+
 def get_url_dom_tree(url):
-    return lxml.etree.fromstring(_get_url_with_retry(url).content)
+    return lxml.etree.fromstring(get_url_bytes(url))
 
 
 def get_url_json(url):
