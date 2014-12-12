@@ -9,6 +9,7 @@ __all__ = ['downloader']
 import functools
 import os
 import os.path
+import requests
 import shutil
 import tempfile
 
@@ -36,6 +37,9 @@ def init_argparser():
     parser.add_argument(
         '--salvage', action='append',
         help='add salvage directory')
+    parser.add_argument(
+        '--ignore-caption-error', action='store_true',
+        help='ignore http error when download captions')
 
 
 @cc.actor.actor
@@ -107,7 +111,7 @@ def _get_dls(episode):
         rtmp = max(video.rtmps, key=lambda r: r.width)
         yield _dl_rtmp, rtmp.url, video.fne, rtmp.ext
         for caption in video.captions:
-            yield _dl_url, caption.url, video.fne, caption.ext
+            yield _dl_caption, caption.url, video.fne, caption.ext
 
 
 @cc.actor.actor
@@ -138,6 +142,17 @@ def _dl_url(url, dir_path, fne, ext):
     doc = cc.http.get_url(url)
     with open(os.path.join(dir_path, fne + ext), 'w') as output:
         output.write(doc)
+
+
+def _dl_caption(url, dir_path, fne, ext):
+    try:
+        _dl_url(url, dir_path, fne, ext)
+    except requests.exceptions.HTTPError:
+        if cc.statics.args.ignore_caption_error:
+            logging.warning('could not download caption %s to %s/%s%s',
+                            url, dir_path, fne, ext, exc_info=True)
+        else:
+            raise
 
 
 def _dl_copy(src_path, dir_path, *_):
