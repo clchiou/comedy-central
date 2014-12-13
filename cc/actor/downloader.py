@@ -108,8 +108,12 @@ def _get_dls(episode):
     if episode.url is not None:
         yield _dl_url, episode.url, 'index', '.html'
     for video in episode.videos:
-        rtmp = max(video.rtmps, key=lambda r: r.width)
-        yield _dl_rtmp, rtmp.url, video.fne, rtmp.ext
+        if video.rtmps:
+            rtmp = max(video.rtmps, key=lambda r: r.width)
+            yield _dl_rtmp, rtmp.url, video.fne, rtmp.ext
+        else:
+            logging.warning('content is unavailable: %s', video.page_url)
+            yield _unavailable, video.page_url, video.fne, '.mp4.unavailable'
         for caption in video.captions:
             yield _dl_caption, caption.url, video.fne, caption.ext
 
@@ -161,6 +165,11 @@ def _dl_copy(src_path, dir_path, *_):
 
 def _dl_rtmp(url, dir_path, fne, ext):
     cc.rtmp.download(url, fne + ext, cwd=dir_path)
+
+
+def _unavailable(url, dir_path, fne, ext):
+    with open(os.path.join(dir_path, fne + ext), 'w') as output:
+        output.write(url)
 
 
 def _dl_none(*_):
