@@ -42,6 +42,9 @@ def init_argparser():
     parser.add_argument(
         '--rtmp-memory-bound', default=10, type=int,
         help='set rtmp memory bound in percent (default: %(default)s)')
+    parser.add_argument(
+        '--rtmp-partial-okay', action='store_true',
+        help='treat partial downloads as success')
 
 
 @cc.inits.init
@@ -59,7 +62,8 @@ def download(url, file_name, cwd=None):
               args.rtmp_timeout,
               args.rtmp_monitor_period,
               args.rtmp_cpu_bound,
-              args.rtmp_memory_bound)
+              args.rtmp_memory_bound,
+              args.rtmp_partial_okay)
 
 
 def _download(url, file_name, cwd,
@@ -67,7 +71,8 @@ def _download(url, file_name, cwd,
               download_timeout,
               monitor_period,
               cpu_bound,
-              memory_bound):
+              memory_bound,
+              partial_okay):
     cwd = cwd or os.getcwd()
     file_name_part = file_name + '.part'
     output_path = os.path.join(cwd, file_name)
@@ -103,12 +108,18 @@ def _download(url, file_name, cwd,
                 break
         timer.cancel()
         if prog == 'rtmpdump' and ret == RTMPDUMP_INCOMPLETE:
+            if partial_okay:
+                logging.warning(
+                    'rtmp: partial download %s to %s', url, file_name)
+                ret = 0
+                break
             with open(output_path_part, 'rb') as output_file:
                 new_digest = hashlib.sha1(output_file.read()).digest()
             if digest is not None and digest == new_digest:
                 # We made no progress; the download might be completed.
                 # Let's not retry and assume it was.
-                logging.warning('rtmp: no progress, break: url=%s', url)
+                logging.warning(
+                    'rtmp: no progress: url=%s file_name=%s', url, file_name)
                 ret = 0
                 break
             digest = new_digest
